@@ -1,0 +1,8 @@
+{
+  "name": "at-silver-folder",
+  "version": "1.0.0.62",
+  "private": true,
+  "dependencies": {
+    "polymer": "Polymer/polymer#master"
+  }
+}

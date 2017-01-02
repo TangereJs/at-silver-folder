@@ -1,0 +1,270 @@
+<link rel="import" href="../tangere/tangere.html">
+<link rel="import" href="../at-core-searchbox/at-core-searchbox.html">
+<link rel="import" href="../at-core-activity/at-core-activity.html">
+<link rel="import" href="../at-core-list/at-core-list.html">
+<link rel="import" href="../at-carbon-pager/at-carbon-pager.html">
+
+<dom-module id="at-silver-folder">
+
+  <style>
+    :host {
+      position: relative;
+      width: 100%;
+      display: block;
+    }
+
+    at-core-searchbox {
+      padding: 16px;
+    }
+
+    at-carbon-pager {
+      padding: 16px;
+    }
+
+  </style>
+
+  <template>
+    <at-core-activity id="app" on-response="bindAppInfo"></at-core-activity>
+    <at-core-activity id="foldersActivity" on-response="bindList" on-error="activityError"></at-core-activity>
+    <at-core-activity id="activity" on-response="bindList" on-error="activityError"></at-core-activity>
+    <at-core-searchbox id="sb" search-term="{{searchTerm}}" placeholder="{{searchPlaceholder}}" style="display:none"></at-core-searchbox>
+    <at-core-list id="folders" card-width="320" card-height="{{cardHeight}}" layout="{{cardLayout}}"></at-core-list>
+    <at-core-list id="list" card-width="320" card-height="{{cardHeight}}" layout="{{cardLayout}}" on-list-ready="_listReady"></at-core-list>
+    <at-carbon-pager id="pager" page="{{page}}" page-size="{{pageSize}}"></at-carbon-pager>
+  </template>
+
+</dom-module>
+
+<script>
+  Polymer({
+    is: "at-silver-folder",
+    properties: {
+      searchTerm: {
+        type: String,
+        value: "",
+        notify: true
+      },
+      searchPlaceholder: {
+        type: String,
+        value: '',
+        reflect: true
+      },
+      service: {
+        type: String,
+        value: "",
+        notify: true
+      },
+      page: {
+        type: Number,
+        value: 1,
+        notify: true
+      },
+      pageSize: {
+        type: Number,
+        value: 18,
+        notify: true
+      },
+      fileComponent: {
+        type: String,
+        value: "",
+        notify: true
+      },
+      folderComponent: {
+        type: String,
+        value: "",
+        notify: true
+      },
+      hideSearchBox: {
+        type: Boolean,
+        value: false,
+        notify: true
+      },
+      cardLayout: {
+        type: String,
+        value: "card",
+        xtype: "enum",
+        available: "card,list"
+      },
+      cardHeight: {
+        type: String,
+        value: "100px"
+      },
+      view: {
+        type: String,
+        value: "",
+        notify: true,
+        xtype: "code",
+        mode: "liquid"
+      },
+      gid: {
+        type: String,
+        value: "",
+        notify: true
+      },
+      value: {
+        type: Object,
+        notify: true,
+        value: null,
+        readOnly: true
+      }
+    },
+    $meta: [{
+      title: "Folder Explorer",
+      type: "element",
+      xtype: "at-silver-folder",
+      events: ["value-changed"],
+      stateProperties: ["page", "pageSize", "searchTerm", "service", "gid"],
+      icon: "now:folder"
+    }],
+    observers: [
+      'start(searchTerm, service, page, pageSize,fileComponent,folderComponent,hideSearchBox,view,gid)'
+    ],
+    start: function () {
+      
+      this.debounce('silver-folder-start', function () {
+        
+        this._showFolders = true;
+
+        if (this.hideSearchBox) {
+          this.$.sb.style.display = 'none';
+        } else {
+          this.$.sb.style.display = 'block';
+        }
+
+        if (!this.service) return;
+
+        var infoUrl = "/api/adenin.GateKeeper.Content/app/" + this.service;
+        if (infoUrl != this.$.app.url) {
+          this.$.app.url = infoUrl;
+          this.$.app.generateRequest();
+        }
+
+        if (this._gid != this.gid || this._service != this.service) {
+
+          this.$.activity.url = "/Activity/adenin.GateKeeper.Service/Proxy/" + this.service;
+          if (this.gid) {
+            if (this.gid.indexOf("/") > 0) {
+              this.$.activity.url = "/api/adenin.GateKeeper.Connector/";
+            }
+            this.$.activity.url = this.$.activity.url + "/" + this.gid;
+          }
+          this.$.foldersActivity.url = this.$.activity.url;
+
+          if (this._gid) {
+            // scroll to top if view changes
+            Polymer.signal("app-scroll-to-top");
+            if (this.page != 1) this.page = 1;
+          }
+
+          this._gid = this.gid;
+          this._service = this.service;
+
+        }
+                
+
+        if (this._searchTerm != this.searchTerm || this._service != this.service) {
+
+          // when search term changes restart with page 1
+          if (typeof (this._searchTerm) != "undefined" && this.page != 1) {
+            this.page = 1;
+          }
+
+          if (this.page < 1) this.page = 1;
+
+          this._searchTerm = this.searchTerm;
+          this._service = this.service;
+
+        }
+
+        if (this._page != this.page) {
+
+          if (this._page) {
+            // scroll to top if view changes
+            Polymer.signal("app-scroll-to-top");
+          }
+          this._page = this.page;
+        }
+
+        if (this.page > 1) this._showFolders = false;
+
+        this.$.pager.hide = true;         // hide pager while loading
+        this.$.list.clear();
+
+        this.$.folders.indicator = true;  // show loading indicator for list, clear list
+
+        this.$.folders.itemComponent = this.folderComponent;
+
+        if (this.view) {
+          this.$.list.itemComponent = "";
+          this.$.list.view = this.view;
+        } else {
+          this.$.list.view = "";
+          this.$.list.itemComponent = this.fileComponent;
+        }
+                
+
+        this.$.activity.params = {
+          query: this.searchTerm,
+          page: this.page,
+          pageSize: this.pageSize,
+          typefilter: "file"
+        };
+
+        this.$.foldersActivity.params = {
+          query: this.searchTerm,
+          page: 1,
+          pageSize: 99,
+          typefilter: "folder"
+        };
+        
+        this._pendingRequests = this._showFolders ? 2 : 1;
+        if (this._showFolders) this.$.foldersActivity.generateRequest();
+        this.$.activity.generateRequest();
+        
+      }, 100);
+    },
+    activityError: function () {
+      // AJAX request failed -> hide list loading indicator
+      this.$.list.indicator = false;
+    },
+    bindAppInfo: function () {
+      if (!this.hideSearchBox) {
+        // when search box is hidden then element is embeded, so we should not set app caption
+        if (!!this.$.app.lastResponse.title) Polymer.signal("app-caption", this.$.app.lastResponse.title);
+      }
+    },
+    bindList: function () {
+      
+      this._pendingRequests--;
+      if(this._pendingRequests) return;
+
+      this._setValue({folders: this.$.foldersActivity.lastResponse, files: this.$.activity.lastResponse });
+
+      // show folders only when data was found
+      if (!this._showFolders || (!!this.$.foldersActivity.lastResponse.items && !this.$.foldersActivity.lastResponse.items.length)) {
+        this.$.folders.indicator = false;        
+      } else {
+        this.$.folders.items = this.$.foldersActivity.lastResponse.items;
+      }
+
+      if (!!this.$.activity.lastResponse.items && !this.$.activity.lastResponse.items.length) {
+        // empty search term && no response -> don't show empty list error
+        this.$.list.indicator = false;
+        this.$.pager.itemCount = 0;
+        this.$.pager.hide = false;
+        return;
+      }
+
+      // bind list to response data
+      this.$.list.items = this.$.activity.lastResponse.items;
+      this.$.pager.itemCount = !this.$.activity.lastResponse.items ? 0 : this.$.activity.lastResponse.items.length;
+    },
+
+    _listReady: function () { 
+      this.$.pager.hide = false; //show pager wher list is rendered
+    },
+    ready: function () {
+
+    }
+  });
+</script>
