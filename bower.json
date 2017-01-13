@@ -3,6 +3,10 @@
   "version": "1.0.0.62",
   "private": true,
   "dependencies": {
-    "polymer": "Polymer/polymer#master"
+    "tangere": "TangereJs/tangere#0.8-preview",
+    "at-core-searchbox": "TangereJs/at-core-searchbox#0.8-preview",
+    "at-core-activity": "TangereJs/at-core-activity#0.8-preview",
+    "at-core-list": "TangereJs/at-core-list#0.8-preview",
+    "at-carbon-pager": "TangereJs/at-carbon-pager#0.8-preview"
   }
 }
