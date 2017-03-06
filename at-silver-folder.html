@@ -207,7 +207,9 @@
           query: this.searchTerm,
           page: this.page,
           pageSize: this.pageSize,
-          typefilter: "file"
+          typefilter: "file",
+          sortorder: "desc",
+          sortby: "date"   // *todo* make sortorder, sortby element property
         };
 
         this.$.foldersActivity.params = {
