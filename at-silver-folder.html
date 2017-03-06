@@ -3,6 +3,7 @@
 <link rel="import" href="../at-core-activity/at-core-activity.html">
 <link rel="import" href="../at-core-list/at-core-list.html">
 <link rel="import" href="../at-carbon-pager/at-carbon-pager.html">
+<link rel="import" href="../at-carbon-empty-state/at-carbon-empty-state.html">
 
 <dom-module id="at-silver-folder">
 
@@ -31,6 +32,7 @@
     <at-core-list id="folders" card-width="320" card-height="{{cardHeight}}" layout="{{cardLayout}}"></at-core-list>
     <at-core-list id="list" card-width="320" card-height="{{cardHeight}}" layout="{{cardLayout}}" on-list-ready="_listReady"></at-core-list>
     <at-carbon-pager id="pager" page="{{page}}" page-size="{{pageSize}}"></at-carbon-pager>
+    <at-carbon-empty-state id="empty" hidden icon="now:folder"></at-carbon-empty-state>
   </template>
 
 </dom-module>
@@ -124,6 +126,9 @@
       this.debounce('silver-folder-start', function () {
         
         this._showFolders = true;
+
+        // hide empty state
+        this.toggleAttribute("hidden", true, this.$.empty);
 
         if (this.hideSearchBox) {
           this.$.sb.style.display = 'none';
@@ -239,6 +244,12 @@
       
       this._pendingRequests--;
       if(this._pendingRequests) return;
+
+      if (this.$.foldersActivity.lastResponse.items.length == 0 && this.$.activity.lastResponse.items.length == 0) {
+        // show empty state
+        this.$.empty.html = "This folder is empty.";
+        this.toggleAttribute("hidden", false, this.$.empty);
+      }
 
       this._setValue({folders: this.$.foldersActivity.lastResponse, files: this.$.activity.lastResponse });
 
