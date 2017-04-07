@@ -245,7 +245,7 @@
       this._pendingRequests--;
       if(this._pendingRequests) return;
 
-      if (this.$.foldersActivity.lastResponse.items.length == 0 && this.$.activity.lastResponse.items.length == 0) {
+      if ((!this._showFolders || this.$.foldersActivity.lastResponse.items.length == 0) && this.$.activity.lastResponse.items.length == 0) {
         // show empty state
         this.$.empty.html = "This folder is empty.";
         this.toggleAttribute("hidden", false, this.$.empty);
